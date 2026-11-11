@@ -1,0 +1,13 @@
+# ID|ServiceDate|Technician|Cost|Remarks
+EQ-0001|01-07-2026|R. Patil|2400.00|Oil change and belt check
+EQ-0001|01-10-2026|R. Patil|2500.00|Spindle lubrication
+EQ-0002|15-09-2026|S. Khan|1100.00|Filter replaced
+EQ-0002|15-10-2026|S. Khan|1200.50|Pressure valve inspection
+EQ-0003|01-06-2026|A. Joshi|1800.00|Chuck alignment
+EQ-0003|01-08-2026|A. Joshi|1850.00|Bearing grease
+EQ-0004|05-09-2026|R. Patil|3200.00|Coolant system flush
+EQ-0005|05-08-2026|S. Khan|900.00|Belt tension adjustment
+EQ-0005|20-09-2026|S. Khan|950.00|Roller replacement
+EQ-0006|10-07-2026|A. Joshi|5200.00|Fuel filter and load test
+EQ-0007|01-10-2026|R. Patil|4100.00|Hydraulic seal replaced
+EQ-0008|14-08-2026|A. Joshi|2300.00|Oil change
