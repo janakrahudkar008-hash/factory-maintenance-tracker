@@ -116,7 +116,7 @@ Simplified rule: **lower layers never call upper layers.** `date_utils` and `val
 ### 2.6 `report`
 
 - **Purpose:** Present information. It performs no calculation that belongs to `maintenance`.
-- **Public functions:** `printEquipmentTable`, `generateDueReport`, `generateOverdueReport`, `generateFleetSummaryReport`, `generateServiceHistoryReport`, `getStatusMessage`
+- **Public functions:** `getEquipmentTypeName`, `getStatusMessage`, `printEquipmentDetails`, `printEquipmentTable`, `generateDueReport`, `generateOverdueReport`, `generateFleetSummaryReport`, `generateServiceHistoryReport`
 - **Depends on:** `equipment`, `maintenance`, `date_utils`
 - **Status codes:** `STATUS_SUCCESS`, `STATUS_ERR_NULL_POINTER`, `STATUS_ERR_INVALID_ARGUMENT`, `STATUS_ERR_NOT_FOUND`, `STATUS_ERR_FILE_IO`
 
@@ -192,6 +192,7 @@ Buffers are sized as `MAX_x_LEN + 1` to hold the terminating null character.
 | `MAINT_DUE_SOON` | 0 to `DUE_SOON_DAYS` days until service |
 | `MAINT_OVERDUE` | Service date has passed |
 | `MAINT_UNDER_REPAIR` | Equipment flagged as under repair (overrides the others) |
+| `MAINT_COUNT` | Number of statuses (used for range checking, not a real status) |
 
 **`EquipmentType_t`**
 
@@ -458,8 +459,10 @@ typedef struct
 
 | Function | Prototype | Purpose | Returns |
 |---|---|---|---|
+| `getEquipmentTypeName` | `const char *getEquipmentTypeName(EquipmentType_t type);` | Equipment type to text | Text, or `"Unknown"` |
+| `printEquipmentDetails` | `Status_t printEquipmentDetails(FILE *out, const Equipment_t *equipment, const Date_t *today);` | All fields of one machine plus due date and status | SUCCESS, NULL_POINTER, date errors, FILE_IO |
 | `printEquipmentTable` | `Status_t printEquipmentTable(FILE *out, const EquipmentList_t *list, const Date_t *today);` | Table: ID, name, next due, days left, status | SUCCESS, NULL_POINTER |
-| `generateDueReport` | `Status_t generateDueReport(FILE *out, const EquipmentList_t *list, const Date_t *today, int withinDays);` | Equipment due within N days (not under repair) | SUCCESS, NULL_POINTER, INVALID_ARGUMENT |
+| `generateDueReport` | `Status_t generateDueReport(FILE *out, const EquipmentList_t *list, const Date_t *today, int withinDays);` | Equipment due within N days, overdue machines included, earliest first (machines under repair excluded) | SUCCESS, NULL_POINTER, INVALID_ARGUMENT |
 | `generateOverdueReport` | `Status_t generateOverdueReport(FILE *out, const EquipmentList_t *list, const Date_t *today);` | Overdue equipment with days late | SUCCESS, NULL_POINTER |
 | `generateFleetSummaryReport` | `Status_t generateFleetSummaryReport(FILE *out, const FleetSummary_t *summary);` | Counts and percentages | SUCCESS, NULL_POINTER |
 | `generateServiceHistoryReport` | `Status_t generateServiceHistoryReport(FILE *out, const ServiceLog_t *log, const char *id);` | History and average interval for one machine | SUCCESS, NULL_POINTER, NOT_FOUND (no records) |
