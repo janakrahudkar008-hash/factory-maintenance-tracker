@@ -1,0 +1,28 @@
+# Build output
+build/
+*.o
+*.d
+*.out
+*.exe
+
+# Executables
+maintenance_tracker
+run_tests
+
+# Logs and crash files
+*.log
+core
+core.*
+
+# Temporary test files
+test_tmp_*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
