@@ -80,19 +80,20 @@ Simplified rule: **lower layers never call upper layers.** `date_utils` and `val
 - **Data used:** `Date_t`
 - **Depends on:** `common.h`
 - **Status codes:** `STATUS_SUCCESS`, `STATUS_ERR_NULL_POINTER`, `STATUS_ERR_INVALID_DATE`, `STATUS_ERR_INVALID_ARGUMENT`
+- **Year range:** accepts real calendar dates in years 1 to 9999. The business range 2000 to 2100 is enforced by `validation`.
 
 ### 2.2 `validation`
 
 - **Purpose:** Decide whether an input is acceptable and convert text to numbers or dates safely.
-- **Public functions:** `validateEquipmentId`, `validateDate`, `validateServiceInterval`, `validateRunningHours`, `validateCost`, `validateTextField`, `validateMenuChoice`, `validateEquipmentRecord`, `parseInteger`, `parseDouble`, `parseDate`
-- **Data used:** `Equipment_t` (for record-level validation), constants from `common.h`
+- **Public functions:** `validateEquipmentId`, `validateDate`, `validateServiceInterval`, `validateRunningHours`, `validateCost`, `validateTextField`, `validateMenuChoice`, `parseInteger`, `parseDouble`, `parseDate`
+- **Data used:** constants from `common.h` (record-level validation lives in `equipment`, which avoids a circular dependency)
 - **Depends on:** `date_utils`, `common.h`
 - **Status codes:** `STATUS_SUCCESS`, `STATUS_ERR_NULL_POINTER`, `STATUS_ERR_INVALID_ID`, `STATUS_ERR_INVALID_DATE`, `STATUS_ERR_INVALID_VALUE`, `STATUS_ERR_INVALID_ARGUMENT`
 
 ### 2.3 `equipment`
 
 - **Purpose:** Own the collections of equipment and service records and keep them consistent.
-- **Public functions:** `initEquipmentList`, `initServiceLog`, `addEquipment`, `findEquipmentById`, `updateEquipment`, `deleteEquipment`, `addServiceRecord`, `logServiceEvent`
+- **Public functions:** `validateEquipmentRecord`, `validateServiceRecord`, `initEquipmentList`, `initServiceLog`, `addEquipment`, `findEquipmentById`, `updateEquipment`, `deleteEquipment`, `addServiceRecord`, `logServiceEvent`
 - **Data owned:** `EquipmentList_t`, `ServiceLog_t` (allocated in `main`, passed by pointer)
 - **Depends on:** `validation`, `date_utils`
 - **Status codes:** `STATUS_SUCCESS`, `STATUS_ERR_NULL_POINTER`, `STATUS_ERR_DUPLICATE`, `STATUS_ERR_NOT_FOUND`, `STATUS_ERR_FULL`, plus validation codes
@@ -155,6 +156,7 @@ Simplified rule: **lower layers never call upper layers.** `date_utils` and `val
 | `MAX_YEAR` | 2100 | Latest accepted year |
 | `DUE_SOON_DAYS` | 7 | Days before due date that count as "due soon" |
 | `MAX_LINE_LEN` | 256 | Buffer size for reading a line |
+| `DATE_TEXT_SIZE` | 11 | Buffer size for a formatted date `DD-MM-YYYY` (defined in `date_utils.h`) |
 | `FIELD_DELIMITER` | `'|'` | Separator in data files |
 | `EQUIPMENT_FILE_PATH` | `"data/equipment.txt"` | Equipment data file (relative path) |
 | `SERVICE_LOG_FILE_PATH` | `"data/service_log.txt"` | Service-log data file (relative path) |
@@ -354,9 +356,9 @@ typedef struct
 #### `addEquipment`
 
 - **Module:** `equipment`
-- **Prototype:** `Status_t addEquipment(EquipmentList_t *list, const Equipment_t *newItem);`
+- **Prototype:** `Status_t addEquipment(EquipmentList_t *list, const Equipment_t *newItem, const Date_t *today);`
 - **Purpose:** Append a validated, unique record to the list.
-- **Parameters:** `list` (input-output); `newItem` (input).
+- **Parameters:** `list` (input-output); `newItem` (input); `today` (input, used for the "not in the future" date rules).
 - **Return values:** `STATUS_SUCCESS`; `STATUS_ERR_NULL_POINTER`; any code from `validateEquipmentRecord`; `STATUS_ERR_DUPLICATE`; `STATUS_ERR_FULL`.
 - **Preconditions:** `list` was initialised by `initEquipmentList`.
 - **Postconditions:** On success `count` increases by 1 and the record is stored at the end. On any error the list is unchanged.
@@ -365,7 +367,7 @@ typedef struct
 #### `logServiceEvent`
 
 - **Module:** `equipment`
-- **Prototype:** `Status_t logServiceEvent(EquipmentList_t *equipment, ServiceLog_t *log, const ServiceRecord_t *record);`
+- **Prototype:** `Status_t logServiceEvent(EquipmentList_t *equipment, ServiceLog_t *log, const ServiceRecord_t *record, const Date_t *today);`
 - **Purpose:** Record a service and update the machine's last service date.
 - **Return values:** `STATUS_SUCCESS`; `STATUS_ERR_NULL_POINTER`; `STATUS_ERR_NOT_FOUND` (unknown equipment); `STATUS_ERR_FULL` (log full); validation codes for bad fields.
 - **Preconditions:** Both collections initialised.
@@ -409,7 +411,6 @@ typedef struct
 | `validateCost` | `Status_t validateCost(double cost);` | Cost in range | SUCCESS, INVALID_VALUE |
 | `validateTextField` | `Status_t validateTextField(const char *text, size_t maxLen, int allowEmpty);` | Length, delimiter, blank check | SUCCESS, NULL_POINTER, INVALID_VALUE |
 | `validateMenuChoice` | `Status_t validateMenuChoice(int choice, int min, int max);` | Choice in range | SUCCESS, INVALID_VALUE, INVALID_ARGUMENT (min above max) |
-| `validateEquipmentRecord` | `Status_t validateEquipmentRecord(const Equipment_t *item, const Date_t *today);` | All fields plus cross-field rules (last service not before install, no future dates) | SUCCESS or the first error found |
 | `parseInteger` | `Status_t parseInteger(const char *text, int *value);` | Strict text to int using `strtol` | SUCCESS, NULL_POINTER, INVALID_VALUE |
 | `parseDouble` | `Status_t parseDouble(const char *text, double *value);` | Strict text to double using `strtod` | SUCCESS, NULL_POINTER, INVALID_VALUE |
 | `parseDate` | see 4.1 | Text to date | see 4.1 |
@@ -420,6 +421,8 @@ typedef struct
 |---|---|---|---|
 | `initEquipmentList` | `Status_t initEquipmentList(EquipmentList_t *list);` | Set count to 0 | SUCCESS, NULL_POINTER |
 | `initServiceLog` | `Status_t initServiceLog(ServiceLog_t *log);` | Set count to 0 | SUCCESS, NULL_POINTER |
+| `validateEquipmentRecord` | `Status_t validateEquipmentRecord(const Equipment_t *item, const Date_t *today);` | All fields plus cross-field rules (last service not before install, no future dates) | SUCCESS or the first error found |
+| `validateServiceRecord` | `Status_t validateServiceRecord(const ServiceRecord_t *record, const Date_t *today);` | All fields of a service record, no future date | SUCCESS or the first error found |
 | `addEquipment` | see 4.1 | Add record | see 4.1 |
 | `findEquipmentById` | `Status_t findEquipmentById(const EquipmentList_t *list, const char *id, int *index);` | Linear search | SUCCESS, NULL_POINTER, INVALID_ID, NOT_FOUND |
 | `updateEquipment` | `Status_t updateEquipment(EquipmentList_t *list, const char *id, const Equipment_t *newData, const Date_t *today);` | Replace fields of an existing record (ID cannot change) | SUCCESS, NULL_POINTER, NOT_FOUND, validation codes |
@@ -448,8 +451,8 @@ typedef struct
 | `loadEquipmentFromFile` | see 4.1 | Read records | see 4.1 |
 | `saveServiceLogToFile` | `Status_t saveServiceLogToFile(const char *path, const ServiceLog_t *log);` | Write all log entries | SUCCESS, NULL_POINTER, FILE_OPEN, FILE_IO |
 | `loadServiceLogFromFile` | `Status_t loadServiceLogFromFile(const char *path, ServiceLog_t *log, int *skippedLines);` | Read log entries | as for equipment load |
-| `parseEquipmentLine` | `Status_t parseEquipmentLine(const char *line, Equipment_t *item);` | One text line to a validated record | SUCCESS, NULL_POINTER, FILE_FORMAT |
-| `parseServiceRecordLine` | `Status_t parseServiceRecordLine(const char *line, ServiceRecord_t *record);` | One text line to a validated record | SUCCESS, NULL_POINTER, FILE_FORMAT |
+| `parseEquipmentLine` | `Status_t parseEquipmentLine(const char *line, Equipment_t *item, const Date_t *today);` | One text line to a validated record | SUCCESS, NULL_POINTER, FILE_FORMAT |
+| `parseServiceRecordLine` | `Status_t parseServiceRecordLine(const char *line, ServiceRecord_t *record, const Date_t *today);` | One text line to a validated record | SUCCESS, NULL_POINTER, FILE_FORMAT |
 
 #### `report`
 
@@ -503,7 +506,6 @@ typedef struct
 |---|---|---|---|---|---|
 | `data/equipment.txt` | Equipment master records | Text, one record per line | `saveEquipmentToFile` on first save | `loadEquipmentFromFile` at startup | Save on exit (rewritten completely) |
 | `data/service_log.txt` | Service history | Text, one entry per line | `saveServiceLogToFile` on first save | `loadServiceLogFromFile` at startup | Save on exit (rewritten completely) |
-| `data/sample_data.txt` | Demonstration data (copy of the equipment file format) | Text | Developer | Copied into `equipment.txt` for demos | Not updated |
 | `data/report_<date>.txt` (optional) | Saved report | Text | Report generators with a file stream | User | Not updated |
 
 A text format is used so the files are human-readable, easy to inspect in a demo, and easy to create in tests.
@@ -843,7 +845,7 @@ Test file names: `tests/test_validation.cpp`, `tests/test_date_utils.cpp`, `test
 | UT-54 | `loadEquipmentFromFile` | Boundary | empty file | `STATUS_SUCCESS`, count 0 | FR-19 |
 | UT-55 | `loadEquipmentFromFile` | Negative | 3 lines, one malformed | `STATUS_ERR_FILE_FORMAT`; 2 loaded; skipped = 1 | FR-19 |
 
-**Total planned: 55 tests** across 5 test files (the minimum required is 10 tests on 3 functions).
+**Planned: 55 representative tests across 5 test files. Implemented: 243 tests** in the `tests/` folder (the minimum required is 10 tests on 3 functions). The implemented suite is larger because each function also has null-pointer and "data unchanged after an error" tests.
 
 ### 10.3 Test Data and Setup
 
@@ -924,8 +926,7 @@ factory-maintenance-tracker/
 |
 |-- data/
 |   |-- equipment.txt
-|   |-- service_log.txt
-|   `-- sample_data.txt
+|   `-- service_log.txt
 |
 |-- docs/
 |   |-- project_proposal.md
