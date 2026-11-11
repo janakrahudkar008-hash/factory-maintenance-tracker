@@ -184,7 +184,8 @@ The software uses a layered modular design:
 - **Interface layer (`main.c`):** shows the menu, reads the user's choice and controls the workflow. It contains no business logic.
 - **Validation layer (`validation.c`):** checks all inputs before they are used.
 - **Data-management layer (`equipment.c`):** owns the equipment and service-record collections and performs add, search, update and delete.
-- **Business-logic layer (`maintenance.c`):** date arithmetic, next-due calculation, status determination, sorting and filtering.
+- **Business-logic layer (`maintenance.c`):** next-due calculation, status determination, sorting, filtering and statistics.
+- **Date utilities (`date_utils.c`):** calendar arithmetic (leap years, adding days, comparing dates, today's date) shared by the other modules.
 - **File-storage layer (`file_handler.c`):** loads and saves records to text files.
 - **Report layer (`report.c`):** produces the due, overdue, summary and history reports.
 
@@ -231,6 +232,8 @@ Each layer only calls the layers below it. Functions return status codes (an enu
    Reports and messages are printed to the screen (and may be saved to a
    report text file).
 ```
+
+The final architecture diagram, which also shows the `date_utils` module, is in `docs/architecture.png`.
 
 ### 5.3 High-Level Workflow
 
@@ -295,7 +298,8 @@ Cleanup and EXIT
 | Main application | `main.c` | Not applicable | Initialise, load data, show menu, call modules, save and clean up |
 | Equipment management | `equipment.c` | `equipment.h` | Defines equipment and service-record structures; add, find, update, delete |
 | Validation | `validation.c` | `validation.h` | Validates IDs, dates, numbers, strings and menu choices |
-| Maintenance logic | `maintenance.c` | `maintenance.h` | Date arithmetic, next-due date, days remaining, status, sorting, filtering |
+| Date utilities | `date_utils.c` | `date_utils.h` | Date structure and calendar arithmetic |
+| Maintenance logic | `maintenance.c` | `maintenance.h` | Next-due date, days remaining, status, sorting, filtering, statistics |
 | File handling | `file_handler.c` | `file_handler.h` | Loads and saves equipment and service-log files with error checks |
 | Reports | `report.c` | `report.h` | Generates due, overdue, fleet-summary and history reports |
 
@@ -304,11 +308,12 @@ Cleanup and EXIT
 | Module | Depends On |
 |---|---|
 | `main.c` | all modules |
-| `equipment` | `validation` |
-| `maintenance` | `equipment` |
-| `file_handler` | `equipment`, `validation` |
-| `report` | `equipment`, `maintenance` |
-| `validation` | none (standalone, easiest to unit test) |
+| `equipment` | `validation`, `date_utils` |
+| `maintenance` | `equipment`, `date_utils` |
+| `file_handler` | `equipment`, `validation`, `date_utils` |
+| `report` | `equipment`, `maintenance`, `date_utils` |
+| `validation` | `date_utils` |
+| `date_utils` | none (standalone, easiest to unit test) |
 
 Detailed function specifications will be written in `docs/detailed_design.md` (Phase 2).
 
